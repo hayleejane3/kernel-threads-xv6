@@ -25,6 +25,8 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int clone(void(*fcn)(void*), void *arg, void *stack);
+int join(void **stack);
 
 // user library functions (ulib.c)
 int stat(char*, struct stat*);
@@ -39,6 +41,13 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
+void lock_init(lock_t *lock);
+void lock_acquire(lock_t *lock);
+void lock_release(lock_t *lock);
+
+// in umalloc.c to access malloc and free
+int thread_create(void (*start_routine)(void*), void *arg);
+int thread_join();
+
 
 #endif // _USER_H_
-

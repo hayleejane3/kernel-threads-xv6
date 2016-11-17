@@ -53,11 +53,11 @@ found:
     return 0;
   }
   sp = p->kstack + KSTACKSIZE;
-  
+
   // Leave room for trap frame.
   sp -= sizeof *p->tf;
   p->tf = (struct trapframe*)sp;
-  
+
   // Set up new context to start executing at forkret,
   // which returns to trapret.
   sp -= 4;
@@ -67,6 +67,7 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
+  // p->numrefs = 0;
 
   return p;
 }
@@ -77,7 +78,7 @@ userinit(void)
 {
   struct proc *p;
   extern char _binary_initcode_start[], _binary_initcode_size[];
-  
+
   p = allocproc();
   acquire(&ptable.lock);
   initproc = p;
@@ -107,7 +108,8 @@ int
 growproc(int n)
 {
   uint sz;
-  
+  struct proc *p;
+
   sz = proc->sz;
   if(n > 0){
     if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0)
@@ -117,6 +119,14 @@ growproc(int n)
       return -1;
   }
   proc->sz = sz;
+
+  // Increase address space for child threads as well
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    if((p->parent == proc) && (p->pgdir == proc->pgdir))
+        p->sz = proc->sz;
+  release(&ptable.lock);
+
   switchuvm(proc);
   return 0;
 }
@@ -145,18 +155,127 @@ fork(void)
   np->parent = proc;
   *np->tf = *proc->tf;
 
-  // Clear %eax so that fork returns 0 in the child.
+  // Clear %eax so that fork returns 0 in the child.temp
   np->tf->eax = 0;
 
   for(i = 0; i < NOFILE; i++)
     if(proc->ofile[i])
       np->ofile[i] = filedup(proc->ofile[i]);
   np->cwd = idup(proc->cwd);
- 
+
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
   return pid;
+}
+
+int
+clone(void (*fcn)(void*), void *arg, void *stack)
+{
+  int i, pid;
+  struct proc *np;
+  uint sp;  // Stack pointer
+  uint ustack[2];  // For setting up stack as in exec.c
+
+  // Check if stack is page aligned
+  if(((uint)stack % PGSIZE) != 0) {
+    return -1;
+  }
+
+  // Checking if stack is not less than a page
+  if((proc->sz - (uint)stack) < PGSIZE) {
+    return -1;
+  }
+
+  // need to check if stack is one page?????????????????
+
+  // Allocate process as in fork
+  if((np = allocproc()) == 0) {
+    return -1;
+  }
+
+  // Set up process state
+  np->stack = stack;  // The thread's stack
+  np->pgdir = proc->pgdir;  // Thread should have same addr space
+  np->sz = (uint)stack + PGSIZE;  //Stack is one page page
+  np->parent = proc;
+  *np->tf = *proc->tf;
+
+  // proc->numrefs++;
+  // np->numrefs = proc->numrefs;
+
+  // Clear %eax so that fork returns 0 in the child.
+  np->tf->eax = 0;
+
+  // Set up the thread's stack
+  sp = (uint)stack + PGSIZE;
+  ustack[0] = 0xffffffff;  // The fake return PC
+  ustack[1] = (uint)arg;	// Store arg for fnc
+  sp -= 2 * sizeof(uint);
+  if(copyout(np->pgdir, sp, ustack, 2*sizeof(uint)) < 0)
+    return -1;
+
+  // Set thread's stack pointer to the stack
+  np->tf->esp = sp;
+
+  // Set thread's instruction pointer to the function
+  np->tf->eip = (uint)fcn;
+
+  switchuvm(np);  // ?????????????????????????
+
+  // Same as in fork:
+  for(i = 0; i < NOFILE; i++)
+    if(proc->ofile[i])
+      np->ofile[i] = filedup(proc->ofile[i]);
+  np->cwd = idup(proc->cwd);
+
+  pid = np->pid;
+  np->state = RUNNABLE;
+  safestrcpy(np->name, proc->name, sizeof(proc->name));
+  return pid;
+}
+
+int
+join(void** stack)
+{  // Almost same as wait
+  struct proc *p;
+  int havekids, pid;
+
+  acquire(&ptable.lock);
+  for(;;){
+    // Scan through table looking for zombie children.
+    havekids = 0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+
+      // Look for a child that is a thread
+      if((p->parent != proc) || (p->pgdir != proc->pgdir))
+        continue;
+
+      havekids = 1;
+      if(p->state == ZOMBIE){
+        // Found one.
+        pid = p->pid;
+        kfree(p->kstack);
+        p->kstack = 0;
+        p->state = UNUSED;
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        p->killed = 0;
+        *stack = p->stack;
+        release(&ptable.lock);
+        return pid;
+      }
+    }
+
+    // No point waiting if we don't have any children.
+    if(!havekids || proc->killed){
+      release(&ptable.lock);
+      return -1;
+    }
+    // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+    sleep(proc, &ptable.lock);  //DOC: wait-sleep
+  }
 }
 
 // Exit the current process.  Does not return.
@@ -189,7 +308,9 @@ exit(void)
 
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->parent == proc){
+    if((p->parent == proc) && (p->pgdir == proc->pgdir))
+      proc->pgdir = copyuvm(p->pgdir, p->sz);
+    if(p->parent == proc) {
       p->parent = initproc;
       if(p->state == ZOMBIE)
         wakeup1(initproc);
@@ -215,14 +336,21 @@ wait(void)
     // Scan through table looking for zombie children.
     havekids = 0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->parent != proc)
+      // Wait for a child process that does not share the address space with
+      // this process
+      if (p->parent != proc)
         continue;
+      if (p->pgdir == proc->pgdir)
+        continue;
+
       havekids = 1;
       if(p->state == ZOMBIE){
         // Found one.
         pid = p->pid;
         kfree(p->kstack);
         p->kstack = 0;
+
+        // Free only if this is the last reference to this addr space
         freevm(p->pgdir);
         p->state = UNUSED;
         p->pid = 0;
@@ -322,7 +450,7 @@ forkret(void)
 {
   // Still holding ptable.lock from scheduler.
   release(&ptable.lock);
-  
+
   // Return to "caller", actually trapret (see allocproc).
 }
 
@@ -425,7 +553,7 @@ procdump(void)
   struct proc *p;
   char *state;
   uint pc[10];
-  
+
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == UNUSED)
       continue;
@@ -442,5 +570,3 @@ procdump(void)
     cprintf("\n");
   }
 }
-
-
