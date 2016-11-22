@@ -45,7 +45,7 @@ void lock_init(lock_t *lock);
 void lock_acquire(lock_t *lock);
 void lock_release(lock_t *lock);
 
-// in umalloc.c to access malloc and free
+// in umalloc.c to access malloc and free. Errors in ulib.c
 int thread_create(void (*start_routine)(void*), void *arg);
 int thread_join();
 

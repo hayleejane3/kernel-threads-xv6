@@ -75,6 +75,7 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
   void* stack;                 // Beginning of stack
+  int is_thread;               // Whether or not this process is a thread
   // int numrefs;                 // Number of references to this procs addr space
 };
 

@@ -67,6 +67,7 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
+  p->is_thread = 0;
   // p->numrefs = 0;
 
   return p;
@@ -154,6 +155,7 @@ fork(void)
   np->sz = proc->sz;
   np->parent = proc;
   *np->tf = *proc->tf;
+  np->is_thread = 0;
 
   // Clear %eax so that fork returns 0 in the child.temp
   np->tf->eax = 0;
@@ -200,6 +202,7 @@ clone(void (*fcn)(void*), void *arg, void *stack)
   np->sz = (uint)stack + PGSIZE;  //Stack is one page page
   np->parent = proc;
   *np->tf = *proc->tf;
+  np->is_thread = 1;
 
   // proc->numrefs++;
   // np->numrefs = proc->numrefs;
@@ -248,7 +251,7 @@ join(void** stack)
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
 
       // Look for a child that is a thread
-      if((p->parent != proc) || (p->pgdir != proc->pgdir))
+      if((p->parent != proc) || (p->pgdir != proc->pgdir) || (!p->is_thread))
         continue;
 
       havekids = 1;
@@ -341,6 +344,8 @@ wait(void)
       if (p->parent != proc)
         continue;
       if (p->pgdir == proc->pgdir)
+        continue;
+      if (p->is_thread)
         continue;
 
       havekids = 1;
