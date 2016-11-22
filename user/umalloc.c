@@ -94,6 +94,8 @@ malloc(uint nbytes)
 
 int thread_create(void (*start_routine)(void*), void *arg) {
   void *stack = malloc(PGSIZE);
+  printf(1, "stack malloced: %p = %d\n", stack, (uint)stack);
+  //printf(1, stack);
   int pid = clone(start_routine, arg, stack);
   return pid;
 }

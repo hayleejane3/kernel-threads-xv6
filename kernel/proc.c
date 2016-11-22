@@ -186,6 +186,7 @@ clone(void (*fcn)(void*), void *arg, void *stack)
 
   // Checking if stack is not less than a page
   if((proc->sz - (uint)stack) < PGSIZE) {
+    cprintf("stack size error!!\n");
     return -1;
   }
 
@@ -235,6 +236,7 @@ clone(void (*fcn)(void*), void *arg, void *stack)
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
+
   return pid;
 }
 
