@@ -4,7 +4,6 @@
 #include "param.h"
 
 #define PGSIZE (4096)
-
 // Memory allocator by Kernighan and Ritchie,
 // The C programming Language, 2nd ed.  Section 8.7.
 
@@ -93,9 +92,12 @@ malloc(uint nbytes)
 
 
 int thread_create(void (*start_routine)(void*), void *arg) {
+  // Ensures stack is one page
   void *stack = malloc(PGSIZE);
-  printf(1, "stack malloced: %p = %d\n", stack, (uint)stack);
-  //printf(1, stack);
+  if((uint)stack % PGSIZE != 0) {
+    free(stack);
+    stack = malloc(2 * PGSIZE);  // Will be made one page in clone
+  }
   int pid = clone(start_routine, arg, stack);
   return pid;
 }

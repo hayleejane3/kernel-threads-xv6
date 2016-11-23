@@ -178,19 +178,19 @@ clone(void (*fcn)(void*), void *arg, void *stack)
   struct proc *np;
   uint sp;  // Stack pointer
   uint ustack[2];  // For setting up stack as in exec.c
+  void* new_stack;
 
-  // Check if stack is page aligned
+  // Make sure stack is page aligned
   if(((uint)stack % PGSIZE) != 0) {
-    return -1;
+    new_stack = stack + (PGSIZE - (uint)stack % PGSIZE);
+  } else {
+    new_stack = stack;
   }
 
   // Checking if stack is not less than a page
-  if((proc->sz - (uint)stack) < PGSIZE) {
-    cprintf("stack size error!!\n");
+  if((proc->sz - (uint)new_stack) < PGSIZE) {
     return -1;
   }
-
-  // need to check if stack is one page?????????????????
 
   // Allocate process as in fork
   if((np = allocproc()) == 0) {
@@ -198,7 +198,8 @@ clone(void (*fcn)(void*), void *arg, void *stack)
   }
 
   // Set up process state
-  np->stack = stack;  // The thread's stack
+  np->stack = new_stack;  // The thread's stack
+  np->stack_addr_to_free = stack;
   np->pgdir = proc->pgdir;  // Thread should have same addr space
   np->sz = (uint)stack + PGSIZE;  //Stack is one page page
   np->parent = proc;
@@ -236,7 +237,6 @@ clone(void (*fcn)(void*), void *arg, void *stack)
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
-
   return pid;
 }
 
@@ -267,7 +267,7 @@ join(void** stack)
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
-        *stack = p->stack;
+        *stack = p->stack_addr_to_free;  // To be freed
         release(&ptable.lock);
         return pid;
       }
