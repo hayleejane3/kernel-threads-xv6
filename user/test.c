@@ -53,17 +53,17 @@ main(int argc, char *argv[])
    assert(thread_pid4 > 0);
    assert(thread_pid5 > 0);
    sleep(100);
-  // int join_pid = thread_join();
+   int join_pid = thread_join();
    //assert(join_pid == thread_pid);
-  //  printf(1, "Joined : %d\n", join_pid);
-  //  join_pid = thread_join();
-  //  printf(1, "Joined : %d\n", join_pid);
-  //  join_pid = thread_join();
-  //  printf(1, "Joined : %d\n", join_pid);
-  //  join_pid = thread_join();
-  //  printf(1, "Joined : %d\n", join_pid);
-  //  join_pid = thread_join();
-  //  printf(1, "Joined : %d\n\n", join_pid);
+   printf(1, "Joined : %d\n", join_pid);
+   join_pid = thread_join();
+   printf(1, "Joined : %d\n", join_pid);
+   join_pid = thread_join();
+   printf(1, "Joined : %d\n", join_pid);
+   join_pid = thread_join();
+   printf(1, "Joined : %d\n", join_pid);
+   join_pid = thread_join();
+   printf(1, "Joined : %d\n\n", join_pid);
 
    printf(1, "global : %d\n", global);
    assert(global == 6);

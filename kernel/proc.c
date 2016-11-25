@@ -196,8 +196,8 @@ clone(void (*fcn)(void*), void *arg, void *stack)
 
   // Set up process state
   np->stack = stack;  // The thread's stack
-  np->stack_addr_to_free = (uint)stack[0];
-  cprintf("addr to free in clone: %d : %p\n", (uint)stack[0], stack[0]);
+  np->stack_addr_to_free = ((uint*)stack)[0];
+  cprintf("addr to free in clone: %d : %p\n", ((uint*)stack)[0], stack);
   np->pgdir = proc->pgdir;  // Thread should have same addr space
   np->sz = (uint)stack + PGSIZE;  //Stack is one page page
   np->parent = proc;
