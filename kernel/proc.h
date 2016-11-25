@@ -76,7 +76,7 @@ struct proc {
   char name[16];               // Process name (debugging)
   void* stack;                 // Beginning of stack
   int is_thread;               // Whether or not this process is a thread
-  void* stack_addr_to_free;    // Address to be freed (not always page aligned)
+  int stack_addr_to_free;   // Stack address to free. May not be aligned
 };
 
 // Process memory is laid out contiguously, low addresses first:

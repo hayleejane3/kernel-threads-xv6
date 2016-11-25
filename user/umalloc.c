@@ -92,12 +92,20 @@ malloc(uint nbytes)
 
 
 int thread_create(void (*start_routine)(void*), void *arg) {
+  uint stack_addr;
   // Ensures stack is one page
   void *stack = malloc(PGSIZE);
-  if((uint)stack % PGSIZE != 0) {
+  if((uint)stack % PGSIZE != 0) {  // Don't allocate 2 pages if already aligned
     free(stack);
-    stack = malloc(2 * PGSIZE);  // Will be made one page in clone
+    stack = malloc(2 * PGSIZE);
+    cprintf("addr malloced: %d : %p\n", (uint)stack, stack);
+    stack_addr = (uint)stack;
+    stack = stack + (PGSIZE - (uint)stack % PGSIZE);
+  } else {
+    stack_addr = (uint)stack;
+    cprintf("addr malloced: %d : %p\n", (uint)stack, stack);
   }
+  stack[0] = stack_addr;
   int pid = clone(start_routine, arg, stack);
   return pid;
 }

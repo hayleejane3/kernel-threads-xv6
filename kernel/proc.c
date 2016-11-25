@@ -178,17 +178,14 @@ clone(void (*fcn)(void*), void *arg, void *stack)
   struct proc *np;
   uint sp;  // Stack pointer
   uint ustack[2];  // For setting up stack as in exec.c
-  void* new_stack;
 
   // Make sure stack is page aligned
   if(((uint)stack % PGSIZE) != 0) {
-    new_stack = stack + (PGSIZE - (uint)stack % PGSIZE);
-  } else {
-    new_stack = stack;
+    return -1;
   }
 
   // Checking if stack is not less than a page
-  if((proc->sz - (uint)new_stack) < PGSIZE) {
+  if((proc->sz - (uint)stack) < PGSIZE) {
     return -1;
   }
 
@@ -198,16 +195,14 @@ clone(void (*fcn)(void*), void *arg, void *stack)
   }
 
   // Set up process state
-  np->stack = new_stack;  // The thread's stack
-  np->stack_addr_to_free = stack;
+  np->stack = stack;  // The thread's stack
+  np->stack_addr_to_free = (uint)stack[0];
+  cprintf("addr to free in clone: %d : %p\n", (uint)stack[0], stack[0]);
   np->pgdir = proc->pgdir;  // Thread should have same addr space
   np->sz = (uint)stack + PGSIZE;  //Stack is one page page
   np->parent = proc;
   *np->tf = *proc->tf;
   np->is_thread = 1;
-
-  // proc->numrefs++;
-  // np->numrefs = proc->numrefs;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -226,7 +221,7 @@ clone(void (*fcn)(void*), void *arg, void *stack)
   // Set thread's instruction pointer to the function
   np->tf->eip = (uint)fcn;
 
-  switchuvm(np);  // ?????????????????????????
+  // switchuvm(np);
 
   // Same as in fork:
   for(i = 0; i < NOFILE; i++)
@@ -242,7 +237,8 @@ clone(void (*fcn)(void*), void *arg, void *stack)
 
 int
 join(void** stack)
-{  // Almost same as wait
+{
+  // Almost same as wait
   struct proc *p;
   int havekids, pid;
 
@@ -267,7 +263,8 @@ join(void** stack)
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
-        *stack = p->stack_addr_to_free;  // To be freed
+        *stack = (void*)p->stack_addr_to_free;  // To be freed
+        cprintf("addr to free in join: %d : %p\n\n", p->stack_addr_to_free, *stack);
         release(&ptable.lock);
         return pid;
       }
@@ -347,12 +344,14 @@ wait(void)
         continue;
       if (p->pgdir == proc->pgdir)
         continue;
+
+      // Ensure that only last reference to memory is freed. i.e parent only
       if (p->is_thread)
         continue;
 
       havekids = 1;
       if(p->state == ZOMBIE){
-        // Found one.
+        // Found one.j,
         pid = p->pid;
         kfree(p->kstack);
         p->kstack = 0;
