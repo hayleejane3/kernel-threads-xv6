@@ -98,15 +98,15 @@ int thread_create(void (*start_routine)(void*), void *arg) {
   if((uint)stack % PGSIZE != 0) {  // Don't allocate 2 pages if already aligned
     free(stack);
     stack = malloc(2 * PGSIZE);
-    printf(1, "addr malloced: %d : %p\n", (uint)stack, stack);
+    // printf(1, "addr malloced: %d : %p\n", (uint)stack, stack);
     stack_addr = (uint)stack;
     stack = stack + (PGSIZE - (uint)stack % PGSIZE);
   } else {
     stack_addr = (uint)stack;
-    printf(1, "addr malloced: %d : %p\n", (uint)stack, stack);
+    // printf(1, "addr malloced: %d : %p\n", (uint)stack, stack);
   }
+  ((uint*)stack)[0] = stack_addr;
   int pid = clone(start_routine, arg, stack);
-  storeaddr(pid, stack_addr);
 
   return pid;
 }
@@ -114,7 +114,7 @@ int thread_create(void (*start_routine)(void*), void *arg) {
 int thread_join() {
   void *stack = NULL;
   int pid = join(&stack);
-  printf(1, "addr freed: %p\n", stack);
+  // printf(1, "addr freed: %p\n", stack);
   free(stack);
   return pid;
 }

@@ -113,19 +113,3 @@ sys_join(void) {
 
   return join(stack);
 }
-
-int
-sys_storeaddr(void) {
-  int pid;
-  int stack;
-  // void *stack;
-
-  if(argint(0, &pid) < 0)
-      return -1;
-  if(argint(1, &stack) < 0)
-      return -1;
-  // if (argptr(2, (void*)&stack, sizeof(void*)) < 0)
-  //   return -1;
-
-  return storeaddr(pid, stack);
-}

@@ -81,7 +81,7 @@ main(int argc, char *argv[])
    join_pid = thread_join();
    printf(1, "Joined : %d\n", join_pid);
    join_pid = thread_join();
-   printf(1, "Joined : %d\n\n", join_pid);
+   printf(1, "Joined : %d\n", join_pid);
 
    printf(1, "Joined : %d\n", join_pid);
    join_pid = thread_join();
@@ -136,3 +136,4 @@ workerToo(void *arg_ptr) {
 }
 // lock_acquire(&lock)
 // sleep(60);
+
