@@ -92,7 +92,7 @@ malloc(uint nbytes)
 
 
 int thread_create(void (*start_routine)(void*), void *arg) {
-  uint stack_addr;
+  int stack_addr;
   // Ensures stack is one page
   void *stack = malloc(PGSIZE);
   if((uint)stack % PGSIZE != 0) {  // Don't allocate 2 pages if already aligned
@@ -105,14 +105,16 @@ int thread_create(void (*start_routine)(void*), void *arg) {
     stack_addr = (uint)stack;
     printf(1, "addr malloced: %d : %p\n", (uint)stack, stack);
   }
-  ((uint*)stack)[0] = stack_addr;
   int pid = clone(start_routine, arg, stack);
+  storeaddr(pid, stack_addr);
+
   return pid;
 }
 
 int thread_join() {
   void *stack = NULL;
   int pid = join(&stack);
+  printf(1, "addr freed: %p\n", stack);
   free(stack);
   return pid;
 }

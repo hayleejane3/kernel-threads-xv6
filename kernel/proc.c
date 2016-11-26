@@ -196,7 +196,7 @@ clone(void (*fcn)(void*), void *arg, void *stack)
 
   // Set up process state
   np->stack = stack;  // The thread's stack
-  np->stack_addr_to_free = ((uint*)stack)[0];
+  // np->stack_addr_to_free = ((uint*)stack)[0];
   cprintf("addr to free in clone: %d : %p\n", ((uint*)stack)[0], stack);
   np->pgdir = proc->pgdir;  // Thread should have same addr space
   np->sz = (uint)stack + PGSIZE;  //Stack is one page page
@@ -235,6 +235,31 @@ clone(void (*fcn)(void*), void *arg, void *stack)
   return pid;
 }
 
+// Syscall to store the stack address to be freed for the thread whose pid is passed
+// Return pid if successful. -1 Otherwise.
+int
+storeaddr(int pid, int stack)
+{
+  struct proc *p;
+  acquire(&ptable.lock);
+
+  // Scan through table looking for process.
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+
+    // Look for a child that is a thread
+    if(p->pid != pid)
+      continue;
+
+    p->stack_addr_to_free = stack;
+    cprintf("pid : %d  addr stored: %d : %p\n", pid, (int)p->stack_addr_to_free, stack);
+
+    release(&ptable.lock);
+    return pid;
+  }
+  release(&ptable.lock);
+  return -1;
+}
+
 int
 join(void** stack)
 {
@@ -264,7 +289,7 @@ join(void** stack)
         p->name[0] = 0;
         p->killed = 0;
         *stack = (void*)p->stack_addr_to_free;  // To be freed
-        cprintf("addr to free in join: %d : %p\n\n", p->stack_addr_to_free, *stack);
+        cprintf("\naddr to free in join: %d : %p\n", p->stack_addr_to_free, *stack);
         release(&ptable.lock);
         return pid;
       }

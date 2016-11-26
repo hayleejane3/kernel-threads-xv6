@@ -45,16 +45,44 @@ main(int argc, char *argv[])
    printf(1, "Created thread 4. PID : %d\n\n", thread_pid4);
 
    int thread_pid5 = thread_create(worker, &arg);
-   printf(1, "Created thread 5. PID : %d\n", thread_pid5);
+   printf(1, "Created thread 5. PID : %d\n\n", thread_pid5);
+
+   int thread_pid6 = thread_create(worker, &arg);
+   printf(1, "Created thread 6. PID : %d\n\n", thread_pid6);
+   int thread_pid7 = thread_create(worker, &arg);
+   printf(1, "Created thread 7. PID : %d\n\n", thread_pid7);
+   int thread_pid8 = thread_create(worker, &arg);
+   printf(1, "Created thread 8. PID : %d\n\n", thread_pid8);
+   int thread_pid9 = thread_create(worker, &arg);
+   printf(1, "Created thread 9. PID : %d\n\n", thread_pid9);
+   int thread_pid10 = thread_create(worker, &arg);
+   printf(1, "Created thread 10. PID : %d\n\n", thread_pid10);
+
 
    assert(thread_pid1 > 0);
    assert(thread_pid2 > 0);
    assert(thread_pid3 > 0);
    assert(thread_pid4 > 0);
    assert(thread_pid5 > 0);
+   assert(thread_pid6 > 0);
+   assert(thread_pid7 > 0);
+   assert(thread_pid8 > 0);
+   assert(thread_pid9 > 0);
+   assert(thread_pid10 > 0);
+
    sleep(100);
    int join_pid = thread_join();
    //assert(join_pid == thread_pid);
+   printf(1, "Joined : %d\n", join_pid);
+   join_pid = thread_join();
+   printf(1, "Joined : %d\n", join_pid);
+   join_pid = thread_join();
+   printf(1, "Joined : %d\n", join_pid);
+   join_pid = thread_join();
+   printf(1, "Joined : %d\n", join_pid);
+   join_pid = thread_join();
+   printf(1, "Joined : %d\n\n", join_pid);
+
    printf(1, "Joined : %d\n", join_pid);
    join_pid = thread_join();
    printf(1, "Joined : %d\n", join_pid);
